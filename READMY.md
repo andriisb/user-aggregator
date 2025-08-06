@@ -14,16 +14,19 @@ JdbcTemplate: For dynamic querying across multiple databases.
 Java Streams API: To aggregate and transform user data efficiently.
 Maven: Project build and dependency management.
 Lombok: Reduces boilerplate code (e.g., getters, setters) for DTOs.
+
 Features
 Dynamic Data Source Aggregation:
-
 Supports infinite databases by configuring them through application.yml.
 Automatically maps inconsistent database schemas (column names) to a unified response format.
+
+Concurrent Querying: 
+Parallel execution for fetching data from multiple databases using CompletableFuture and ExecutorService.
+
 Flyway Database Migrations:
-
 Flyway creates the schema (tables) and seeds initial data in both MySQL and PostgreSQL.
-Efficient Data Aggregation:
 
+Efficient Data Aggregation:
 Collects user data from multiple sources.
 Aggregates and transforms data into a unified format.
 Success Response Example
@@ -135,17 +138,3 @@ Spring Boot: REST API development and bean lifecycle management.
 Flyway: Database schema migration and versioning.
 Lombok: Reduces boilerplate code for DTOs (UserEntity and DataSourceProperties).
 Maven: Dependency management and project build tool.
-Future Improvements
-
-Handle Duplicates:
-Extend the aggregation logic to handle duplicate users across databases more effectively (e.g., deduplication based on
-username).
-
-Support More Database Types:
-Extend support for Oracle, SQLite, or additional database types.
-Add dynamic configuration to detect strategy types (mysql, postgres, etc.).
-Better Error Handling:
-
-Add proper exception handling for scenarios like:
-Failed database connections.
-Invalid data mappings.

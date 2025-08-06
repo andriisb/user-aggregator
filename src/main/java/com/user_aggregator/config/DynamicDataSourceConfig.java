@@ -6,9 +6,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.sql.DataSource;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Configuration
 @RequiredArgsConstructor
@@ -18,20 +17,15 @@ public class DynamicDataSourceConfig {
 
     @Bean
     public Map<String, DataSource> dataSources() {
-        Map<String, DataSource> dataSourceMap = new HashMap<>();
-        List<DataSourceProperties> sources = aggregatorProperties.getDataSources();
+        return aggregatorProperties.getDataSources().stream()
+                .collect(Collectors.toMap(DataSourceProperties::getName, this::createDataSource));
+    }
 
-        if (sources != null && !sources.isEmpty()) {
-            for (DataSourceProperties source : sources) {
-                HikariDataSource dataSource = new HikariDataSource();
-                dataSource.setJdbcUrl(source.getUrl());
-                dataSource.setUsername(source.getUser());
-                dataSource.setPassword(source.getPassword());
-                dataSourceMap.put(source.getName(), dataSource);
-            }
-        } else {
-            System.out.println("No data sources configured. The 'data-sources' list is empty or null.");
-        }
-        return dataSourceMap;
+    private HikariDataSource createDataSource(DataSourceProperties source) {
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setJdbcUrl(source.getUrl());
+        dataSource.setUsername(source.getUser());
+        dataSource.setPassword(source.getPassword());
+        return dataSource;
     }
 }

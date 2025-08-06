@@ -1,17 +1,6 @@
-spring:
-  datasource:
-    initialization-mode: never
-  main:
-    log-startup-info: true
-  logging:
-    level:
-      org.springframework.boot.autoconfigure: DEBUG
-      com.user_aggregator.config: DEBUG
-
 aggregator:
   data-sources:
     - name: database_postgres
-      strategy: postgres
       url: jdbc:postgresql://localhost:5432/database_postgres
       user: postgres
       password: root
