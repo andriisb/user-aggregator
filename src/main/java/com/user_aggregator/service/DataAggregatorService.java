@@ -3,20 +3,18 @@ package com.user_aggregator.service;
 import com.user_aggregator.config.AggregatorProperties;
 import com.user_aggregator.config.DataSourceProperties;
 import com.user_aggregator.entity.UserEntity;
-import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import javax.sql.DataSource;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,37 +24,16 @@ public class DataAggregatorService {
     private final Map<String, DataSource> dataSources;
     private final AggregatorProperties aggregatorProperties;
 
-    private final ExecutorService executor = Executors.newFixedThreadPool(5);
-
-    public List<UserEntity> fetchAllUsers() {
-        List<CompletableFuture<List<UserEntity>>> futures = createFuturesForAllDataSources();
-        return aggregateFutures(futures);
+    public Flux<UserEntity> fetchAllUsers() {
+        return Flux.fromIterable(aggregatorProperties.getDataSources())
+                .flatMap(this::fetchUsersWithFallback)
+                .flatMap(Flux::fromIterable)
+                .distinct();
     }
 
-    private List<CompletableFuture<List<UserEntity>>> createFuturesForAllDataSources() {
-        return aggregatorProperties.getDataSources().stream()
-                .map(source -> CompletableFuture.supplyAsync(() -> fetchUsersWithFallback(source), executor))
-                .toList();
-    }
-
-    private List<UserEntity> aggregateFutures(List<CompletableFuture<List<UserEntity>>> futures) {
-        CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-
-        return allFutures.thenApply(v -> futures.stream()
-                        .map(CompletableFuture::join)
-                        .flatMap(List::stream)
-                        .distinct()
-                        .collect(Collectors.toList()))
-                .join();
-    }
-
-    private List<UserEntity> fetchUsersWithFallback(DataSourceProperties source) {
-        try {
-            return fetchUsersFromDataSource(source);
-        } catch (Exception e) {
-            log.error("Error fetching users from datasource [{}]: {}", source.getName(), e.getMessage());
-            return List.of();
-        }
+    private Mono<List<UserEntity>> fetchUsersWithFallback(DataSourceProperties source) {
+        return Mono.fromCallable(() -> fetchUsersFromDataSource(source))
+                .onErrorReturn(Collections.emptyList());
     }
 
     private List<UserEntity> fetchUsersFromDataSource(DataSourceProperties source) {
@@ -91,7 +68,7 @@ public class DataAggregatorService {
                         String.format("Mappings are missing in data source: %s", source.getName())));
 
         requiredKeys.stream()
-                .filter(key -> !mapping.containsKey(key)) // Check for missing keys
+                .filter(key -> !mapping.containsKey(key))
                 .findFirst()
                 .ifPresent(key -> {
                     throw new IllegalArgumentException(
@@ -99,10 +76,5 @@ public class DataAggregatorService {
                     );
                 });
     }
-
-    @PreDestroy
-    public void shutdownExecutor() {
-        executor.shutdown();
-        log.info("ExecutorService has been shut down.");
-    }
 }
+

@@ -18,6 +18,8 @@ public class UserController {
 
     @GetMapping
     public List<UserEntity> getUsers() {
-        return aggregatorService.fetchAllUsers();
+        return aggregatorService.fetchAllUsers()
+                .collectList()
+                .block();
     }
 }
